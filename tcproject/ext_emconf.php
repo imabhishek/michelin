@@ -12,7 +12,7 @@
 
 $EM_CONF[$_EXTKEY] = array(
 	'title' => 'Project Space',
-	'description' => 'Project Space',
+	'description' => 'Project Space for fe users',
 	'category' => 'module',
 	'author' => 'Claus Bruun',
 	'author_email' => 'cb@typoconsult.dk',
