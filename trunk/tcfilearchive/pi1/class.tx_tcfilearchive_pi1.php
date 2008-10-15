@@ -50,24 +50,70 @@ class tx_tcfilearchive_pi1 extends tslib_pibase {
 		$this->pi_setPiVarDefaults();
 		$this->pi_loadLL();
 		
-	
-		$content='
-			<strong>This is a few paragraphs:</strong><br />
-			<p>This is line 1</p>
-			<p>This is line 2</p>
-	
-			<h3>This is a form:</h3>
-			<form action="'.$this->pi_getPageLink($GLOBALS['TSFE']->id).'" method="POST">
-				<input type="hidden" name="no_cache" value="1">
-				<input type="text" name="'.$this->prefixId.'[input_field]" value="'.htmlspecialchars($this->piVars['input_field']).'">
-				<input type="submit" name="'.$this->prefixId.'[submit_button]" value="'.htmlspecialchars($this->pi_getLL('submit_button_label')).'">
-			</form>
-			<br />
-			<p>You can click here to '.$this->pi_linkToPage('get to this page again',$GLOBALS['TSFE']->id).'</p>
-		';
+		
+		// Add the css file
+		$includeFiles = "\t" . '<link href="' . t3lib_extMgm::siteRelPath($this->extKey) . 'res/jqueryFileTree.css" rel="stylesheet" type="text/css" media="screen" />';
+		// Add the js file
+		$includeFiles .= "\n\t" . '<script type="text/javascript" src="' . t3lib_extMgm::siteRelPath($this->extKey)  . 'res/jqueryFileTree.js"></script>';
+		$GLOBALS['TSFE']->additionalHeaderData[$this->prefixId] = $includeFiles;
+		
+		
+		$content = $this->renderFileTree();
+		
 	
 		return $this->pi_wrapInBaseClass($content);
 	}
+	
+	
+	/**
+	 * Render the file tree
+	 *
+	 * @return	The content that is displayed on the website
+	 */
+	function renderFileTree()	{
+		
+		
+		// Add specific JS
+		$javascript = "
+jQuery(document).ready( function() {
+	jQuery('#fileTreeDemo_" . $this->cObj->data['uid'] . "').fileTree({ root: 'fileadmin/', script: '/index.php?eID=tcfilearchive' }, function(file) { 
+		alert(file);
+	});
+});
+</script>
+
+
+
+
+		<style type='text/css'>
+			.demo {
+				width: 200px;
+				height: 200px;
+				border-top: solid 1px #BBB;
+				border-left: solid 1px #BBB;
+				border-bottom: solid 1px #FFF;
+				border-right: solid 1px #FFF;
+				background: #FFF;
+				overflow: scroll;
+				padding: 5px;
+			}
+		</style>
+
+
+
+
+";
+
+		$GLOBALS['TSFE']->additionalHeaderData[$this->prefixId] .= "\n" . '<script type="text/javascript">' . $javascript . "</script>";
+
+		
+		$content = '<div id="fileTreeDemo_' . $this->cObj->data['uid'] . '" class="demo">heps</div>';
+
+		return $content;
+		
+	}
+	
+	
 }
 
 
