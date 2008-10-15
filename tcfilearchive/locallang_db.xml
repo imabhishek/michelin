@@ -12,6 +12,7 @@
 			<label index="tx_tcfilearchive_content.type.I.1">File</label>
 			<label index="tx_tcfilearchive_content.type">Type</label>
 			<label index="tx_tcfilearchive_content.path">Path</label>
+			<label index="tt_content.list_type_pi1">Filearchive</label>
 		</languageKey>
 		<languageKey index="dk" type="array">
 			<label index="tx_tcfilearchive_content">Filarkiv indhold</label>
@@ -19,6 +20,7 @@
 			<label index="tx_tcfilearchive_content.type.I.1">Fil</label>
 			<label index="tx_tcfilearchive_content.type">Type</label>
 			<label index="tx_tcfilearchive_content.path">Sti</label>
+			<label index="tt_content.list_type_pi1">Filarkiv</label>
 		</languageKey>
 	</data>
 </T3locallang>
