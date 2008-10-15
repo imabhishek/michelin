@@ -44,149 +44,250 @@ $BE_USER->modAccess($MCONF,1);	// This checks permissions and exits if the users
  * @subpackage	tx_tcproject
  */
 class  tx_tcproject_module1 extends t3lib_SCbase {
-				var $pageinfo;
+	
+	var $pageinfo;
 
-				/**
-				 * Initializes the Module
-				 * @return	void
-				 */
-				function init()	{
-					global $BE_USER,$LANG,$BACK_PATH,$TCA_DESCR,$TCA,$CLIENT,$TYPO3_CONF_VARS;
+	
+	
+	/**
+	 * Create a new project space
+	 *
+	 * @return	boolean success
+	 */
+	function createSpace()	{
 
-					parent::init();
+		// Change title on this
+		$newTitle = trim(t3lib_div::_GP('title'));
+		if($newTitle != "") {
 
-					/*
-					if (t3lib_div::_GP('clear_all_cache'))	{
-						$this->include_once[] = PATH_t3lib.'class.t3lib_tcemain.php';
-					}
-					*/
+			// Use the TCEmain for copying the template
+			$tce = t3lib_div::makeInstance('t3lib_TCEmain');
+			$tce->stripslashes_values = 0;
+			$tce->copyTree = 4;
+			$tce->copyWhichTables = "*";
+			$cmd['pages'][$this->templateUid]['copy'] = -1 * $this->templateUid;
+			$tce->start(array(), $cmd);
+			$tce->process_cmdmap();
+
+			// This is our new page
+			$newPage = $tce->copyMappingArray_merged['pages'][$this->templateUid];
+			$GLOBALS['TYPO3_DB']->exec_UPDATEquery("pages", "uid='" . $newPage . "'", array('title' => $newTitle, 'hidden' => 0));
+			
+			t3lib_BEfunc::getSetUpdateSignal('updatePageTree');
+			
+			// Redirect to edit mode
+			$goTo = $this->doc->backPath . 'alt_doc.php?returnUrl=' . rawurlencode(t3lib_div::getIndpEnv("REQUEST_URI"));
+			$goTo .= '&edit[pages][' . $newPage . ']=edit';
+
+			// All good: redirect to edit page
+			header('Location: ' . $goTo);
+			exit();
+			
+		} else {
+			 $this->error[] = $GLOBALS['LANG']->getLL('titleError');
+			return false;	
+		}
+
+		
+		
+		return true;
+	}
+	
+	
+	/**
+	 * Render the success message with information about the newly created space
+	 *
+	 * @return	string the information
+	 */
+	function renderSpaceInfo() {
+		return "<br><b>" . t3lib_div::_GP('title') . "</b> " . $GLOBALS['LANG']->getLL('information');
+	}
+	
+
+	
+	
+	/**
+	 * Render the formula for creating a space
+	 *
+	 * @return	string the form
+	 */
+	function renderForm()	{
+
+		$fields[] = $this->renderField( $GLOBALS['LANG']->getLL('settings'), 'divider', '');
+		$fields[] = $this->renderField( $GLOBALS['LANG']->getLL('spaceTitle'), 'text', 'title');
+	
+		if(count($this->error) > 0) {
+			$form .= "<span style='display:block;color:red;font-weight:bold;padding:10px;'>" .
+							 implode("<br />", $this->error) . 
+					 "</span>";	
+		}
+
+		$form .= "<form action=" . t3lib_div::getThisUrl() . "><table border='0' cellpadding='7'>";
+		$form .= implode("\n", $fields);
+		$form .= "<tr><td colspan='2' align='right'>" .
+				 "<input type='hidden' name='formPosted' value='1'>" . 
+				 "<input type='submit' value='" . $GLOBALS['LANG']->getLL('createSpace') . "'></td></tr></table></form>";
+
+		return $form;
+	}
+	
+	
+
+
+	/**
+	 * The main method of the PlugIn
+	 *
+	 * @param	string		$label: field label
+	 * @param	string		$type: field type
+	 * @param	string		$name: filed name
+	 *
+	 * @return	The content that is displayed on the website
+	 */
+	function renderField($label, $type, $name) {
+
+		switch($type) {
+	
+			case 'divider':
+				$field =  "<tr><td colspan='2'><b>" . $label . "</b></td></tr>";
+			break;
+	
+			default:
+				$field =  "<input type='" . $type . "' name='" . $name . "' value='" . t3lib_div::_GP($name) . "'>";
+				$field =  "<tr><td>" . $label . "</td><td>" . $field . "</td></tr>";
+		}
+
+		return $field;
+	}
+
+
+
+
+
+
+	
+	
+	/**
+	 * check that the configured tmpl page exists 
+	 * @return	void
+	 */
+	function checkTemplatePage()	{
+		
+		// Get the record
+		$template = t3lib_BEfunc::getRecord('pages', $this->templateUid);
+
+		if($template['doktype'] != '71') {
+			return false;	
+		}
+		
+		return true;
+	}
+	
+	
+	
+	/**
+	 * Initializes the Module
+	 * @return	void
+	 */
+	function init()	{
+		global $BE_USER,$LANG,$BACK_PATH,$TCA_DESCR,$TCA,$CLIENT,$TYPO3_CONF_VARS;
+		parent::init();
+	}
+
+	
+	
+	/**
+	 * Main function of the module. Write the content to $this->content
+	 * If you chose "web" as main module, you will need to consider the $this->id parameter which will contain the uid-number of the page clicked in the page tree
+	 *
+	 * @return	[type]		...
+	 */
+	function main()	{
+		global $BE_USER,$LANG,$BACK_PATH,$TCA_DESCR,$TCA,$CLIENT,$TYPO3_CONF_VARS;
+
+		// Access check!
+		// The page will show only if there is a valid page and if this page may be viewed by the user
+		$this->pageinfo = t3lib_BEfunc::readPageAccess($this->id,$this->perms_clause);
+
+	
+			// Draw the header.
+		$this->doc = t3lib_div::makeInstance('mediumDoc');
+		$this->doc->backPath = $BACK_PATH;
+		$this->doc->form='<form action="" method="POST">';
+
+			// JavaScript
+		$this->doc->JScode = '
+			<script language="javascript" type="text/javascript">
+				script_ended = 0;
+				function jumpToUrl(URL)	{
+					document.location = URL;
 				}
+			</script>
+		';
+		$this->doc->postCode='
+			<script language="javascript" type="text/javascript">
+				script_ended = 1;
+				if (top.fsMod) top.fsMod.recentIds["web"] = 0;
+			</script>
+		';
 
-				/**
-				 * Adds items to the ->MOD_MENU array. Used for the function menu selector.
-				 *
-				 * @return	void
-				 */
-				function menuConfig()	{
-					global $LANG;
-					$this->MOD_MENU = Array (
-						'function' => Array (
-							'1' => $LANG->getLL('function1'),
-							'2' => $LANG->getLL('function2'),
-							'3' => $LANG->getLL('function3'),
-						)
-					);
-					parent::menuConfig();
-				}
+		$headerSection = $this->doc->getHeader('pages',$this->pageinfo,$this->pageinfo['_thePath']).'<br />'.$LANG->sL('LLL:EXT:lang/locallang_core.xml:labels.path').': '.t3lib_div::fixed_lgd_pre($this->pageinfo['_thePath'],50);
 
-				/**
-				 * Main function of the module. Write the content to $this->content
-				 * If you chose "web" as main module, you will need to consider the $this->id parameter which will contain the uid-number of the page clicked in the page tree
-				 *
-				 * @return	[type]		...
-				 */
-				function main()	{
-					global $BE_USER,$LANG,$BACK_PATH,$TCA_DESCR,$TCA,$CLIENT,$TYPO3_CONF_VARS;
+		$this->content.=$this->doc->startPage($LANG->getLL('title'));
+		$this->content.=$this->doc->header($LANG->getLL('title'));
+		$this->content.=$this->doc->divider(5);
 
-					// Access check!
-					// The page will show only if there is a valid page and if this page may be viewed by the user
-					$this->pageinfo = t3lib_BEfunc::readPageAccess($this->id,$this->perms_clause);
-					$access = is_array($this->pageinfo) ? 1 : 0;
+		// Render content:
+		$this->moduleContent();
 
-					if (($this->id && $access) || ($BE_USER->user['admin'] && !$this->id))	{
+		// ShortCut
+		if ($BE_USER->mayMakeShortcut())	{
+			$this->content.=$this->doc->spacer(20).$this->doc->section('',$this->doc->makeShortcutIcon('id',implode(',',array_keys($this->MOD_MENU)),$this->MCONF['name']));
+		}
 
-							// Draw the header.
-						$this->doc = t3lib_div::makeInstance('mediumDoc');
-						$this->doc->backPath = $BACK_PATH;
-						$this->doc->form='<form action="" method="POST">';
+		$this->content.=$this->doc->spacer(10);
 
-							// JavaScript
-						$this->doc->JScode = '
-							<script language="javascript" type="text/javascript">
-								script_ended = 0;
-								function jumpToUrl(URL)	{
-									document.location = URL;
-								}
-							</script>
-						';
-						$this->doc->postCode='
-							<script language="javascript" type="text/javascript">
-								script_ended = 1;
-								if (top.fsMod) top.fsMod.recentIds["web"] = 0;
-							</script>
-						';
+	}
+	
 
-						$headerSection = $this->doc->getHeader('pages',$this->pageinfo,$this->pageinfo['_thePath']).'<br />'.$LANG->sL('LLL:EXT:lang/locallang_core.xml:labels.path').': '.t3lib_div::fixed_lgd_pre($this->pageinfo['_thePath'],50);
+	/**
+	 * Prints out the module HTML
+	 *
+	 * @return	void
+	 */
+	function printContent()	{
 
-						$this->content.=$this->doc->startPage($LANG->getLL('title'));
-						$this->content.=$this->doc->header($LANG->getLL('title'));
-						$this->content.=$this->doc->spacer(5);
-						$this->content.=$this->doc->section('',$this->doc->funcMenu($headerSection,t3lib_BEfunc::getFuncMenu($this->id,'SET[function]',$this->MOD_SETTINGS['function'],$this->MOD_MENU['function'])));
-						$this->content.=$this->doc->divider(5);
+		$this->content.=$this->doc->endPage();
+		echo $this->content;
+	}
 
+	
+	/**
+	 * Generates the module content
+	 *
+	 * @return	void
+	 */
+	function moduleContent() {
 
-						// Render content:
-						$this->moduleContent();
+		// Check that we can get the template page
+		$this->templateUid = intval($GLOBALS['MCONF']['uidOfTemplate']);
+		
+		if(!$this->checkTemplatePage()) {
+			return $GLOBALS['LANG']->getLL('errorNoTemplate');
+		}
 
-
-						// ShortCut
-						if ($BE_USER->mayMakeShortcut())	{
-							$this->content.=$this->doc->spacer(20).$this->doc->section('',$this->doc->makeShortcutIcon('id',implode(',',array_keys($this->MOD_MENU)),$this->MCONF['name']));
-						}
-
-						$this->content.=$this->doc->spacer(10);
-					} else {
-							// If no access or if ID == zero
-
-						$this->doc = t3lib_div::makeInstance('mediumDoc');
-						$this->doc->backPath = $BACK_PATH;
-
-						$this->content.=$this->doc->startPage($LANG->getLL('title'));
-						$this->content.=$this->doc->header($LANG->getLL('title'));
-						$this->content.=$this->doc->spacer(5);
-						$this->content.=$this->doc->spacer(10);
-					}
-				}
-
-				/**
-				 * Prints out the module HTML
-				 *
-				 * @return	void
-				 */
-				function printContent()	{
-
-					$this->content.=$this->doc->endPage();
-					echo $this->content;
-				}
-
-				/**
-				 * Generates the module content
-				 *
-				 * @return	void
-				 */
-				function moduleContent()	{
-					switch((string)$this->MOD_SETTINGS['function'])	{
-						case 1:
-							$content='<div align="center"><strong>Hello World!</strong></div><br />
-								The "Kickstarter" has made this module automatically, it contains a default framework for a backend module but apart from that it does nothing useful until you open the script '.substr(t3lib_extMgm::extPath('tcproject'),strlen(PATH_site)).$pathSuffix.'index.php and edit it!
-								<hr />
-								<br />This is the GET/POST vars sent to the script:<br />'.
-								'GET:'.t3lib_div::view_array($_GET).'<br />'.
-								'POST:'.t3lib_div::view_array($_POST).'<br />'.
-								'';
-							$this->content.=$this->doc->section('Message #1:',$content,0,1);
-						break;
-						case 2:
-							$content='<div align=center><strong>Menu item #2...</strong></div>';
-							$this->content.=$this->doc->section('Message #2:',$content,0,1);
-						break;
-						case 3:
-							$content='<div align=center><strong>Menu item #3...</strong></div>';
-							$this->content.=$this->doc->section('Message #3:',$content,0,1);
-						break;
-					}
-				}
+		// What to do?
+		if(t3lib_div::_GP('formPosted')) {
+			if($this->createSpace()) {
+				$this->content .= $this->renderSpaceInfo();
+			} else {
+				$this->content .= $this->renderForm();
 			}
+		} else {
+			$this->content .= $this->renderForm();	
+		}
+	}
+	
+}
 
 
 

@@ -6,13 +6,20 @@
 	</meta>
 	<data type="array">
 		<languageKey index="default" type="array">
-			<label index="title">Project Space</label>
-			<label index="function1">Function #1</label>
-			<label index="function2">Function #2</label>
-			<label index="function3">Function #3</label>
+			<label index="title">Project Spaces</label>
+			<label index="errorNoTemplate">There is no available template in the current configuration...</label>
+			<label index="spaceTitle">Project Space title</label>
+			<label index="settings">Create new Project Space</label>
+			<label index="createSpace">Click here to create a new Project Space</label>
+			<label index="information">was created succesfully...</label>
+			
+			<label index="titleError">'Project Space title' is mandatory</label>
+			
+			
 		</languageKey>
 		<languageKey index="dk" type="array">
-			<label index="title">Projekt rum</label>
+
+		
 		</languageKey>
 	</data>
 </T3locallang>

@@ -11,4 +11,9 @@ $MCONF['script']='index.php';
 
 $MLANG['default']['tabs_images']['tab'] = 'project.gif';
 $MLANG['default']['ll_ref']='LLL:EXT:tcproject/mod1/locallang_mod.xml';
+
+
+$MCONF['uidOfTemplate'] = 305;
+
+
 ?>
